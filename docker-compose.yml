@@ -6,5 +6,5 @@ services:
     env_file:
       - .env
     volumes:
-      - ./db.sqlite3:/app/db.sqlite3
+      - ./db.sqlite3:/db.sqlite3
     restart: unless-stopped
