@@ -41,6 +41,7 @@ def get_users():
 def get_all_users():
     return cursor.execute("SELECT id, first_name, last_name FROM users").fetchall()
 
+
 def remove_user(user_id: int):
     cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
     conn.commit()
@@ -54,7 +55,7 @@ def add_video(title: str, link: str):
 def get_videos():
     return [
         {"title": row[0], "link": row[1]}
-        for row in cursor.execute("SELECT title, link FROM videos")
+        for row in cursor.execute("SELECT title, link FROM videos ORDER BY title COLLATE NOCASE")
     ]
 
 

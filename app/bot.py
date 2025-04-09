@@ -66,8 +66,8 @@ async def handle_message(message: Message):
         return
 
     # Команда /add — добавить ссылку (только для админа)
-    if text.startswith("/add") and user_id in ADMINS:
-        content = text.replace("/add", "").strip()
+    if text.startswith("/add_video") and user_id in ADMINS:
+        content = text.replace("/add_video", "").strip()
         if "|" in content:
             title, link = map(str.strip, content.split("|", 1))
             add_video(title, link)
@@ -78,7 +78,7 @@ async def handle_message(message: Message):
                     pass
             await message.answer("✅ Видео добавлено и разослано.")
         else:
-            await message.answer("❗ Пример: /add Название | https://...")
+            await message.answer("❗ Пример: /add_video Тема № : Название | https://...")
         return
 
     # Удалить пользователя
