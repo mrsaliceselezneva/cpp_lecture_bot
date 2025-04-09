@@ -51,18 +51,30 @@ async def handle_message(message: Message):
         return
 
     if text.startswith("/add_user") and user_id in ADMINS:
-        parts = text.split()
-        if len(parts) >= 4:
-            try:
-                new_user_id = int(parts[1])
-                first_name = parts[2]
-                last_name = " ".join(parts[3:])
-                add_user(new_user_id, first_name, last_name)
-                await message.answer(f"✅ Пользователь {first_name} {last_name} ({new_user_id}) добавлен.")
-            except ValueError:
-                await message.answer("❗ Неверный формат ID.")
+        lines = text.strip().split("\n")[1:]  # пропускаем первую строку с "/add_user"
+        if not lines:
+            await message.answer("❗ Пример:\n/add_user\n123456789 Иван Иванов\n987654321 Пётр Петров")
+            return
+
+        added = []
+        for line in lines:
+            parts = line.strip().split()
+            if len(parts) >= 3:
+                try:
+                    uid = int(parts[0])
+                    first_name = parts[1]
+                    last_name = " ".join(parts[2:])
+                    add_user(uid, first_name, last_name)
+                    added.append(f"{first_name} {last_name} ({uid})")
+                except ValueError:
+                    continue
+
+        if added:
+            msg = "✅ Добавлены пользователи:\n" + "\n".join(added)
+            await message.answer(msg)
         else:
-            await message.answer("Пример: /add_user 123456789 Иван Иванов")
+            await message.answer(
+                "❗ Ни одного корректного пользователя не найдено. Пример:\n/add_user\n123456789 Иван Иванов")
         return
 
     # Команда /add — добавить ссылку (только для админа)
