@@ -21,10 +21,12 @@ CREATE TABLE IF NOT EXISTS users (
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS videos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    theme_number INTEGER,
     title TEXT,
     link TEXT
 )
 ''')
+
 
 conn.commit()
 
