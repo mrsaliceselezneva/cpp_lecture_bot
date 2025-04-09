@@ -4,7 +4,8 @@ from aiogram.types import Message
 from app.config import BOT_TOKEN, ADMINS
 from app.db import (
     add_user, get_users, add_video, get_videos, get_all_users,
-    remove_user, remove_video_by_link, search_videos_by_title
+    remove_user, remove_video_by_link, search_videos_by_title,
+    remove_video_by_number
 )
 
 bot = Bot(token=BOT_TOKEN)
@@ -118,14 +119,27 @@ async def handle_message(message: Message):
         return
 
     # Удалить видео по ID или ссылке
-    if text.startswith("/del_video") and user_id in ADMINS:
+    if text.startswith("/del_video_link") and user_id in ADMINS:
         parts = text.split(maxsplit=1)
         if len(parts) == 2:
             arg = parts[1]
             remove_video_by_link(arg)
             await message.answer("✅ Видео по ссылке удалено.")
         else:
-            await message.answer("Пример: /del_video https://...")
+            await message.answer("Пример: /del_video_link https://...")
+        return
+
+    if text.startswith("/del_video_num") and user_id in ADMINS:
+        parts = text.split()
+        if len(parts) == 2:
+            try:
+                theme_num = int(parts[1])
+                remove_video_by_number(theme_num)
+                await message.answer(f"✅ Тема №{theme_num} удалена и остальные темы пересчитаны.")
+            except ValueError:
+                await message.answer("❗ Неверный номер темы.")
+        else:
+            await message.answer("Пример: /del_video_num 2")
         return
 
     if text.startswith("/find"):
