@@ -7,9 +7,27 @@ from app.db import (
     remove_user, remove_video_by_link, search_videos_by_title,
     remove_video_by_number
 )
+from aiogram.types import CallbackQuery
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+
+
+@dp.callback_query()
+async def handle_callback(query: CallbackQuery):
+    data = query.data
+
+    if data.startswith("approve_user:") and query.from_user.id in ADMINS:
+        try:
+            _, uid_str, first_name, last_name = data.split(":", 3)
+            uid = int(uid_str)
+            add_user(uid, first_name, last_name)
+            await bot.send_message(uid, "✅ Ваша заявка одобрена. Доступ к боту открыт.")
+            await query.answer("Пользователь добавлен.")
+            await query.message.edit_text(f"✅ Пользователь {first_name} {last_name} (ID {uid}) добавлен.")
+        except Exception as e:
+            await query.answer("❗ Ошибка при добавлении.")
+            print(f"Ошибка approve_user: {e}")
 
 
 @dp.message()
@@ -125,6 +143,38 @@ async def handle_message(message: Message):
             await message.answer(f"⚠️ Пропущены строки:\n{msg}")
         return
 
+    if text.startswith("/registration") and user_id not in get_users() and user_id not in ADMINS:
+        parts = text.strip().split(maxsplit=2)
+        if len(parts) < 3:
+            await message.answer("❗ Пример: /registration Иван Иванов")
+            return
+
+        first_name, last_name = parts[1], parts[2]
+
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(
+            InlineKeyboardButton(
+                text=f"➕ Добавить {first_name} {last_name}",
+                callback_data=f"approve_user:{user_id}:{first_name}:{last_name}"
+            )
+        )
+
+        for admin_id in ADMINS:
+            try:
+                await bot.send_message(
+                    admin_id,
+                    f"📥 Заявка на добавление:\nID: `{user_id}`\nИмя: {first_name}\nФамилия: {last_name}",
+                    reply_markup=keyboard,
+                    parse_mode="Markdown"
+                )
+            except Exception:
+                pass
+
+        await message.answer("📨 Заявка отправлена администраторам. Ожидайте подтверждения.")
+        return
+
     # Удалить пользователя
     if text.startswith("/del_user") and user_id in ADMINS:
         parts = text.split()
@@ -185,19 +235,20 @@ async def handle_message(message: Message):
                 "/add_user – добавить одного или нескольких пользователей:\n"
                 "  Пример:\n"
                 "  /add_user\n"
-                "  123456789 Иван Иванов\n"
-                "  987654321 Пётр Петров\n\n"
+                "  123456789 Иван Иванов\n\n"
                 "/del_user ID – удалить пользователя\n"
                 "/users – список всех пользователей\n\n"
-                "/add_video – добавить одно или несколько видео:\n"
+                "/add – добавить одно или несколько видео:\n"
                 "  Пример:\n"
-                "  /add_video\n"
-                "  1. Вводная лекция: https://...\n"
-                "  Название без номера: https://...  ← присвоится следующий номер\n\n"
-                "/del_video_link ссылка – удалить видео по ссылке\n"
+                "  /add\n"
+                "  1. Название: ссылка\n"
+                "  Название без номера: ссылка (будет присвоен следующий номер)\n\n"
+                "/del_video ссылка – удалить видео по ссылке\n"
                 "/del_video_num N – удалить видео с темой №N и сдвинуть остальные\n\n"
                 "/videos – список всех видео\n"
-                "/find ключевое_слово – поиск по названию\n"
+                "/find ключевое_слово – поиск по названию\n\n"
+                "📥 Пользователи без доступа могут отправлять заявки через /registration Имя Фамилия,\n"
+                "и вам придёт уведомление с кнопкой для добавления."
             )
         elif user_id in get_users():
             await message.answer(
@@ -207,7 +258,11 @@ async def handle_message(message: Message):
                 "/find ключевое_слово – поиск по названию\n"
             )
         else:
-            await message.answer("🚫 У вас нет доступа к боту.")
+            await message.answer(
+                "🚫 У вас нет доступа к боту.\n\n"
+                "Если вы хотите получить доступ, отправьте заявку через:\n"
+                "/registration Имя Фамилия"
+            )
         return
 
 
