@@ -143,7 +143,7 @@ async def handle_message(message: Message):
             await message.answer(f"⚠️ Пропущены строки:\n{msg}")
         return
 
-    if text.startswith("/registration") and user_id not in get_users() and user_id not in ADMINS:
+    if text.startswith("/registration"):
         parts = text.strip().split(maxsplit=2)
         if len(parts) < 3:
             await message.answer("❗ Пример: /registration Иван Иванов")
@@ -238,12 +238,12 @@ async def handle_message(message: Message):
                 "  123456789 Иван Иванов\n\n"
                 "/del_user ID – удалить пользователя\n"
                 "/users – список всех пользователей\n\n"
-                "/add – добавить одно или несколько видео:\n"
+                "/add_video – добавить одно или несколько видео:\n"
                 "  Пример:\n"
-                "  /add\n"
+                "  /add_video\n"
                 "  1. Название: ссылка\n"
                 "  Название без номера: ссылка (будет присвоен следующий номер)\n\n"
-                "/del_video ссылка – удалить видео по ссылке\n"
+                "/del_video_link ссылка – удалить видео по ссылке\n"
                 "/del_video_num N – удалить видео с темой №N и сдвинуть остальные\n\n"
                 "/videos – список всех видео\n"
                 "/find ключевое_слово – поиск по названию\n\n"
