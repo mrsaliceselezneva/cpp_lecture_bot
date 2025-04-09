@@ -1,6 +1,7 @@
 import asyncio
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from aiogram.types import Message
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from app.config import BOT_TOKEN, ADMINS
 from app.db import (
     add_user, get_users, add_video, get_videos, get_all_users,
@@ -143,15 +144,15 @@ async def handle_message(message: Message):
             await message.answer(f"⚠️ Пропущены строки:\n{msg}")
         return
 
-    if text.startswith("/registration"):
+    users = get_users()
+    if text.startswith("/registration") and user_id not in users and user_id not in ADMINS:
+        print(">> команда /registration получена")
         parts = text.strip().split(maxsplit=2)
         if len(parts) < 3:
             await message.answer("❗ Пример: /registration Иван Иванов")
             return
 
         first_name, last_name = parts[1], parts[2]
-
-        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
         keyboard = InlineKeyboardMarkup()
         keyboard.add(
