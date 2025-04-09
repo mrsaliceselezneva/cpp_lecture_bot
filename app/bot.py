@@ -67,18 +67,28 @@ async def handle_message(message: Message):
 
     # Команда /add — добавить ссылку (только для админа)
     if text.startswith("/add_video") and user_id in ADMINS:
-        content = text.replace("/add_video", "").strip()
-        if "|" in content:
-            title, link = map(str.strip, content.split("|", 1))
-            add_video(title, link)
+        lines = text.strip().split("\n")[1:]  # пропускаем первую строку с "/add"
+        if not lines:
+            await message.answer("❗ Пример:\n/add_video\nЛекция 1 | https://...\nЛекция 2 | https://...")
+            return
+
+        added = []
+        for line in lines:
+            if "|" in line:
+                title, link = map(str.strip, line.split("|", 1))
+                add_video(title, link)
+                added.append((title, link))
+
+        if added:
+            msg = "\n\n".join([f"*{title}*\n{link}" for title, link in added])
             for uid in get_users():
                 try:
-                    await bot.send_message(uid, f"📢 Новое видео:\n*{title}*\n{link}", parse_mode="Markdown")
+                    await bot.send_message(uid, f"📢 Добавлены новые видео:\n\n{msg}", parse_mode="Markdown")
                 except Exception:
                     pass
-            await message.answer("✅ Видео добавлено и разослано.")
+            await message.answer("✅ Добавлено и разослано:")
         else:
-            await message.answer("❗ Пример: /add_video Тема № : Название | https://...")
+            await message.answer("❗ Ни одной валидной строки не найдено. Пример:\n/add_video\nЛекция 1 | https://...")
         return
 
     # Удалить пользователя
