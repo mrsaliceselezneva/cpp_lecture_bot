@@ -49,23 +49,26 @@ def remove_user(user_id: int):
 
 
 def add_video(title: str, link: str):
-    # парсим формат: "1. Название"
     match = re.match(r"(\d+)\.\s*(.+)", title)
-    if not match:
-        raise ValueError("Ожидается формат '1. Название'")
+    if match:
+        # Есть номер в заголовке — использовать его
+        theme_number = int(match.group(1))
+        title_text = match.group(2)
 
-    theme_number = int(match.group(1))
-    title_text = match.group(2)
+        # Сдвигаем темы с номером >= theme_number
+        cursor.execute("""
+            UPDATE videos
+            SET theme_number = theme_number + 1
+            WHERE theme_number >= ?
+            ORDER BY theme_number DESC
+        """, (theme_number,))
+    else:
+        # Номера нет — определить следующий по порядку
+        result = cursor.execute("SELECT MAX(theme_number) FROM videos").fetchone()
+        theme_number = (result[0] or 0) + 1
+        title_text = title.strip()
 
-    # сдвигаем все темы с таким или большим номером
-    cursor.execute("""
-        UPDATE videos
-        SET theme_number = theme_number + 1
-        WHERE theme_number >= ?
-        ORDER BY theme_number DESC
-    """, (theme_number,))
-
-    # вставляем новое видео
+    # Добавить новое видео
     cursor.execute("""
         INSERT INTO videos (theme_number, title, link)
         VALUES (?, ?, ?)
