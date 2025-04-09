@@ -78,26 +78,36 @@ async def handle_message(message: Message):
                 "❗ Ни одного корректного пользователя не найдено. Пример:\n/add_user\n123456789 Иван Иванов")
         return
 
-    # Команда /add — добавить ссылку (только для админа)
-    if text.startswith("/add") and user_id in ADMINS:
-        lines = text.strip().split("\n")[1:]  # пропускаем первую строку с "/add"
+    # Команда /add_video — добавить ссылку (только для админа)
+    if text.startswith("/add_video") and user_id in ADMINS:
+        raw_lines = text.strip().splitlines()
+        lines = [line.strip() for line in raw_lines if line.strip() and not line.strip().startswith("/add")]
+
         if not lines:
             await message.answer("❗ Пример:\n/add\n1. Название: ссылка\nНазвание без номера: ссылка")
             return
 
         added = []
+        skipped = []
+
         for line in lines:
             if ":" not in line:
-                continue  # пропускаем строки без двоеточия
+                skipped.append(line)
+                continue
 
-            title, link = map(str.strip, line.split(":", 1))
+            parts = line.split(":", 1)
+            title = parts[0].strip()
+            link = parts[1].strip()
+
+            if not link.startswith("http"):
+                skipped.append(line)
+                continue
 
             try:
                 add_video(title, link)
                 added.append((title, link))
             except Exception as e:
-                print(f"Ошибка при добавлении видео: {e}")
-                continue
+                skipped.append(f"{line} (ошибка: {e})")
 
         if added:
             msg = "\n\n".join([f"*{title}*\n{link}" for title, link in added])
@@ -106,9 +116,13 @@ async def handle_message(message: Message):
                     await bot.send_message(uid, f"📢 Добавлены новые видео:\n\n{msg}", parse_mode="Markdown")
                 except Exception:
                     pass
-            await message.answer(f"✅ Добавлено {len(added)} видео и разослано пользователям.")
+            await message.answer(f"✅ Добавлено {len(added)} видео.")
         else:
-            await message.answer("❗ Не удалось распознать ни одной строки. Убедитесь в формате:\nНазвание: ссылка")
+            await message.answer("❗ Не удалось добавить ни одного видео. Проверь формат: `Название: ссылка`")
+
+        if skipped:
+            msg = "\n".join(skipped)
+            await message.answer(f"⚠️ Пропущены строки:\n{msg}")
         return
 
     # Удалить пользователя
