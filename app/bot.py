@@ -1,14 +1,12 @@
 import asyncio
 from aiogram import Bot, Dispatcher
-from aiogram.types import Message
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from app.config import BOT_TOKEN, ADMINS
 from app.db import (
     add_user, get_users, add_video, get_videos, get_all_users,
     remove_user, remove_video_by_link, search_videos_by_title,
     remove_video_by_number
 )
-from aiogram.types import CallbackQuery
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -18,17 +16,40 @@ dp = Dispatcher()
 async def handle_callback(query: CallbackQuery):
     data = query.data
 
-    if data.startswith("approve_user:") and query.from_user.id in ADMINS:
+    if data.startswith("approve_user:"):
+        if query.from_user.id not in ADMINS:
+            await query.answer("❌ Только администратор может это сделать.")
+            return
+
         try:
-            _, uid_str, first_name, last_name = data.split(":", 3)
-            uid = int(uid_str)
-            add_user(uid, first_name, last_name)
-            await bot.send_message(uid, "✅ Ваша заявка одобрена. Доступ к боту открыт.")
+            _, user_id, first_name, last_name = data.split(":", 3)
+            user_id = int(user_id)
+
+            if user_id in get_users():
+                await query.answer("Пользователь уже добавлен.")
+                await query.message.edit_text(
+                    f"✅ Пользователь [{first_name} {last_name}](tg://user?id={user_id}) уже был добавлен.",
+                    parse_mode="Markdown"
+                )
+                return
+
+            # добавляем в БД
+            add_user(user_id, first_name, last_name)
+
+            # сообщаем пользователю
+            await bot.send_message(user_id, "✅ Ваша заявка одобрена. Доступ к видео открыт.")
+
+            # редактируем сообщение
+            await query.message.edit_text(
+                f"✅ Пользователь [{first_name} {last_name}](tg://user?id={user_id}) был добавлен.",
+                parse_mode="Markdown"
+            )
+
             await query.answer("Пользователь добавлен.")
-            await query.message.edit_text(f"✅ Пользователь {first_name} {last_name} (ID {uid}) добавлен.")
         except Exception as e:
             await query.answer("❗ Ошибка при добавлении.")
-            print(f"Ошибка approve_user: {e}")
+            print("Ошибка approve_user:", e)
+
 
 
 @dp.message()
@@ -146,34 +167,37 @@ async def handle_message(message: Message):
 
     users = get_users()
     if text.startswith("/registration") and user_id not in users and user_id not in ADMINS:
-        print(">> команда /registration получена")
         parts = text.strip().split(maxsplit=2)
         if len(parts) < 3:
             await message.answer("❗ Пример: /registration Иван Иванов")
             return
 
-        first_name, last_name = parts[1], parts[2]
+        first_name = parts[1]
+        last_name = parts[2]
 
-        keyboard = InlineKeyboardMarkup()
-        keyboard.add(
-            InlineKeyboardButton(
-                text=f"➕ Добавить {first_name} {last_name}",
-                callback_data=f"approve_user:{user_id}:{first_name}:{last_name}"
-            )
-        )
+        await message.answer("📨 Заявка отправлена. Ожидайте подтверждения.")
 
-        for admin_id in ADMINS:
-            try:
-                await bot.send_message(
-                    admin_id,
-                    f"📥 Заявка на добавление:\nID: `{user_id}`\nИмя: {first_name}\nФамилия: {last_name}",
-                    reply_markup=keyboard,
-                    parse_mode="Markdown"
+        # создаём кнопку
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=f"✅ Разрешить",
+                    callback_data=f"approve_user:{user_id}:{first_name}:{last_name}"
                 )
-            except Exception:
-                pass
+            ]
+        ])
 
-        await message.answer("📨 Заявка отправлена администраторам. Ожидайте подтверждения.")
+        # создаём ссылку на пользователя
+        mention = f"[{first_name} {last_name}](tg://user?id={user_id})"
+
+        # отправляем всем админам
+        for admin_id in ADMINS:
+            await bot.send_message(
+                admin_id,
+                f"📥 {mention} хочет получить доступ к видео.\nРазрешить?",
+                reply_markup=keyboard,
+                parse_mode="Markdown"
+            )
         return
 
     # Удалить пользователя
