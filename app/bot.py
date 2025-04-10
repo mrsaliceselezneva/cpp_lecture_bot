@@ -65,7 +65,11 @@ async def handle_message(message: Message):
             add_user(user_id, message.from_user.first_name, message.from_user.last_name or "")
             await message.answer("👋 Вы были автоматически добавлены как администратор.")
         else:
-            await message.answer("🚫 У вас нет доступа к боту. Обратитесь к администратору.")
+            await message.answer(
+                "🚫 У вас нет доступа к боту.\n\n"
+                "Если вы хотите получить доступ, отправьте заявку через:\n"
+                "/registration Имя Фамилия"
+            )
         return
 
     if text.startswith("/users") and user_id in ADMINS:
