@@ -75,7 +75,11 @@ async def handle_message(message: Message):
     if text.startswith("/users") and user_id in ADMINS:
         users = get_all_users()
         if users:
-            msg = "👥 Пользователи:\n" + "\n".join([str(u[0]) for u in users])
+            msg_lines = [
+                f"{uid} — {first} {last}".strip()
+                for uid, first, last in users
+            ]
+            msg = "👥 Пользователи:\n" + "\n".join(msg_lines)
             await message.answer(msg)
         else:
             await message.answer("📭 Пока нет пользователей.")
